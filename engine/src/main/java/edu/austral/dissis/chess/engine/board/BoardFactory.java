@@ -1,4 +1,4 @@
 package edu.austral.dissis.chess.engine.board;
 
-public class Position {
+public class BoardFactory {
 }
