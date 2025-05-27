@@ -15,22 +15,23 @@ import java.util.Optional;
 
 public final class StandardChessRules implements GameRules {
 
+    private final CheckDetectionService checkDetectionService;
+
+    public StandardChessRules() {
+        this.checkDetectionService = new CheckDetectionService();
+    }
+
     @Override
     public boolean isValidMove(Move move, Board board) {
-        Optional<Piece> piece = board.getPieceAt(move.from());
-
-        if (piece.isEmpty()) {
+        if (isPieceNotPresent(move, board)) {
             return false;
         }
 
-        if (piece.get().color() != move.player().color()) {
+        if (isWrongPlayersPiece(move, board)) {
             return false;
         }
 
-        List<Position> validMoves = piece.get().movementStrategy()
-                .getValidMoves(move.from(), board, piece.get().color());
-
-        if (!validMoves.contains(move.to())) {
+        if (isMoveNotInValidMoves(move, board)) {
             return false;
         }
 
@@ -39,7 +40,17 @@ public final class StandardChessRules implements GameRules {
 
     @Override
     public Result checkGameResult(Board board) {
-        // Simplified implementation - would need full check/checkmate detection
+        for (Color color : Color.values()) {
+            if (checkDetectionService.isCheckmate(board, color)) {
+                Player winner = createWinnerForColor(color.opposite());
+                return Result.checkmate(winner);
+            }
+
+            if (checkDetectionService.isStalemate(board, color)) {
+                return Result.draw("Stalemate");
+            }
+        }
+
         return Result.ongoing();
     }
 
@@ -51,45 +62,61 @@ public final class StandardChessRules implements GameRules {
             return board;
         }
 
-        Board newBoard = board.withoutPieceAt(move.from());
-
+        Board newBoard = removePieceFromOrigin(board, move.from());
         Piece finalPiece = handleSpecialMoves(movingPiece.get(), move, board);
-        newBoard = newBoard.withPieceAt(move.to(), finalPiece);
 
-        return newBoard;
+        return placePieceAtDestination(newBoard, move.to(), finalPiece);
+    }
+
+    private boolean isPieceNotPresent(Move move, Board board) {
+        return board.getPieceAt(move.from()).isEmpty();
+    }
+
+    private boolean isWrongPlayersPiece(Move move, Board board) {
+        Optional<Piece> piece = board.getPieceAt(move.from());
+        return piece.map(p -> p.color() != move.player().color()).orElse(true);
+    }
+
+    private boolean isMoveNotInValidMoves(Move move, Board board) {
+        Optional<Piece> piece = board.getPieceAt(move.from());
+        if (piece.isEmpty()) {
+            return true;
+        }
+
+        List<Position> validMoves = getValidMovesForPiece(piece.get(), move.from(), board);
+        return !validMoves.contains(move.to());
+    }
+
+    private List<Position> getValidMovesForPiece(Piece piece, Position from, Board board) {
+        return piece.movementStrategy().getValidMoves(from, board, piece.color());
     }
 
     private boolean wouldLeaveKingInCheck(Move move, Board board) {
-        Board testBoard = applyMove(move, board);
-        Position kingPos = findKing(testBoard, move.player().color());
-        return isPositionUnderAttack(kingPos, testBoard, move.player().color().opposite());
+        return checkDetectionService.wouldMoveLeaveKingInCheck(
+                board, move.from(), move.to(), move.player().color());
     }
 
-    private Position findKing(Board board, Color color) {
-        return board.getAllPieces().entrySet().stream()
-                .filter(entry -> entry.getValue().type() == PieceType.KING &&
-                        entry.getValue().color() == color)
-                .map(entry -> entry.getKey())
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("King not found"));
+    private Player createWinnerForColor(Color color) {
+        return new Player("Player_" + color.name(), color);
     }
 
-    private boolean isPositionUnderAttack(Position position, Board board, Color attackingColor) {
-        return board.getAllPieces().entrySet().stream()
-                .filter(entry -> entry.getValue().color() == attackingColor)
-                .anyMatch(entry -> {
-                    List<Position> moves = entry.getValue().movementStrategy()
-                            .getValidMoves(entry.getKey(), board, attackingColor);
-                    return moves.contains(position);
-                });
+    private Board removePieceFromOrigin(Board board, Position from) {
+        return board.withoutPieceAt(from);
+    }
+
+    private Board placePieceAtDestination(Board board, Position to, Piece piece) {
+        return board.withPieceAt(to, piece);
     }
 
     private Piece handleSpecialMoves(Piece piece, Move move, Board board) {
-        if (piece.type() == PieceType.PAWN &&
-                PawnPromotionStrategy.isPromotionMove(move.from(), move.to(), piece.color())) {
+        if (isPawnPromotion(piece, move)) {
             return PawnPromotionStrategy.promoteToQueen(piece.color());
         }
-
         return piece;
+    }
+
+    private boolean isPawnPromotion(Piece piece, Move move) {
+        return piece.type() == PieceType.PAWN &&
+                PawnPromotionStrategy.isPromotionMove(move.from(), move.to(), piece.color());
     }
 }
