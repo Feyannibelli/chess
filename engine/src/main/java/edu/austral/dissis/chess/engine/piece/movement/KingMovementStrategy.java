@@ -14,6 +14,12 @@ public final class KingMovementStrategy implements MovementStrategy {
             {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
     };
 
+    private final CastlingStrategy castlingStrategy;
+
+    public KingMovementStrategy() {
+        this.castlingStrategy = new CastlingStrategy();
+    }
+
     @Override
     public List<Position> getValidMoves(Position from, Board board, Color color) {
         List<Position> moves = new ArrayList<>();
@@ -34,7 +40,7 @@ public final class KingMovementStrategy implements MovementStrategy {
     }
 
     private void addCastlingMoves(List<Position> moves, Position from, Board board, Color color) {
-        List<Position> castlingMoves = CastlingStrategy.getCastlingMoves(from, board, color);
+        List<Position> castlingMoves = castlingStrategy.getCastlingMoves(from, board, color);
         moves.addAll(castlingMoves);
     }
 

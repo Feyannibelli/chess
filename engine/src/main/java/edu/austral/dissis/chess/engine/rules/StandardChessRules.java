@@ -3,11 +3,11 @@ package edu.austral.dissis.chess.engine.rules;
 import edu.austral.dissis.chess.engine.board.Board;
 import edu.austral.dissis.chess.engine.board.Position;
 import edu.austral.dissis.chess.engine.color.Color;
-import edu.austral.dissis.chess.engine.game.GameState;
 import edu.austral.dissis.chess.engine.game.Move;
 import edu.austral.dissis.chess.engine.game.Player;
 import edu.austral.dissis.chess.engine.game.Result;
 import edu.austral.dissis.chess.engine.piece.Piece;
+import edu.austral.dissis.chess.engine.piece.PieceFactory;
 import edu.austral.dissis.chess.engine.piece.PieceType;
 import edu.austral.dissis.chess.engine.piece.movement.special.PawnPromotionStrategy;
 import java.util.List;
@@ -60,6 +60,10 @@ public final class StandardChessRules implements GameRules {
 
         if (movingPiece.isEmpty()) {
             return board;
+        }
+
+        if (isCastlingMove(movingPiece.get(), move)) {
+            return applyCastling(board, move);
         }
 
         Board newBoard = removePieceFromOrigin(board, move.from());
@@ -118,5 +122,43 @@ public final class StandardChessRules implements GameRules {
     private boolean isPawnPromotion(Piece piece, Move move) {
         return piece.type() == PieceType.PAWN &&
                 PawnPromotionStrategy.isPromotionMove(move.from(), move.to(), piece.color());
+    }
+
+    private boolean isCastlingMove(Piece piece, Move move) {
+        return piece.type() == PieceType.KING &&
+                Math.abs(move.from().column() - move.to().column()) == 2;
+    }
+
+    private Board applyCastling(Board board, Move move) {
+        Piece king = board.getPieceAt(move.from()).orElseThrow();
+
+        Board newBoard = board.withoutPieceAt(move.from())
+                .withPieceAt(move.to(), king);
+
+        if (isKingsideCastling(move)) {
+            return moveRookForKingsideCastling(newBoard, move);
+        } else {
+            return moveRookForQueensideCastling(newBoard, move);
+        }
+    }
+
+    private boolean isKingsideCastling(Move move) {
+        return move.to().column() == 6;
+    }
+
+    private Board moveRookForKingsideCastling(Board board, Move move) {
+        Position rookFrom = new Position(move.from().row(), 7);
+        Position rookTo = new Position(move.from().row(), 5);
+
+        Piece rook = board.getPieceAt(rookFrom).orElseThrow();
+        return board.withoutPieceAt(rookFrom).withPieceAt(rookTo, rook);
+    }
+
+    private Board moveRookForQueensideCastling(Board board, Move move) {
+        Position rookFrom = new Position(move.from().row(), 0);
+        Position rookTo = new Position(move.from().row(), 3);
+
+        Piece rook = board.getPieceAt(rookFrom).orElseThrow();
+        return board.withoutPieceAt(rookFrom).withPieceAt(rookTo, rook);
     }
 }

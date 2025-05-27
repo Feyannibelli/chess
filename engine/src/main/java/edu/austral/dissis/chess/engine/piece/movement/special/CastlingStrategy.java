@@ -5,6 +5,7 @@ import edu.austral.dissis.chess.engine.board.Position;
 import edu.austral.dissis.chess.engine.color.Color;
 import edu.austral.dissis.chess.engine.piece.Piece;
 import edu.austral.dissis.chess.engine.piece.PieceType;
+import edu.austral.dissis.chess.engine.rules.CheckDetectionService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -17,10 +18,20 @@ public final class CastlingStrategy {
     private static final int KINGSIDE_KING_TARGET = 6;
     private static final int QUEENSIDE_KING_TARGET = 2;
 
-    public static List<Position> getCastlingMoves(Position kingPosition, Board board, Color color) {
+    private final CheckDetectionService checkDetectionService;
+
+    public CastlingStrategy() {
+        this.checkDetectionService = new CheckDetectionService();
+    }
+
+    public List<Position> getCastlingMoves(Position kingPosition, Board board, Color color) {
         List<Position> moves = new ArrayList<>();
 
         if (!isKingInInitialPosition(kingPosition, color)) {
+            return moves;
+        }
+
+        if (checkDetectionService.isInCheck(board, color)) {
             return moves;
         }
 
@@ -35,24 +46,24 @@ public final class CastlingStrategy {
         return moves;
     }
 
-    private static boolean isKingInInitialPosition(Position position, Color color) {
+    private boolean isKingInInitialPosition(Position position, Color color) {
         int expectedRow = getInitialRow(color);
         return position.row() == expectedRow && position.column() == KING_INITIAL_COLUMN;
     }
 
-    private static int getInitialRow(Color color) {
+    private int getInitialRow(Color color) {
         return color == Color.WHITE ? 0 : 7;
     }
 
-    private static Position createKingsideTarget(Position kingPosition) {
+    private Position createKingsideTarget(Position kingPosition) {
         return new Position(kingPosition.row(), KINGSIDE_KING_TARGET);
     }
 
-    private static Position createQueensideTarget(Position kingPosition) {
+    private Position createQueensideTarget(Position kingPosition) {
         return new Position(kingPosition.row(), QUEENSIDE_KING_TARGET);
     }
 
-    private static boolean canCastleKingside(Position kingPos, Board board, Color color) {
+    private boolean canCastleKingside(Position kingPos, Board board, Color color) {
         Position rookPos = createKingsideRookPosition(kingPos);
 
         return isRookPresent(board, rookPos, color) &&
@@ -60,7 +71,7 @@ public final class CastlingStrategy {
                 !wouldKingPassThroughDanger(board, kingPos, color, 1);
     }
 
-    private static boolean canCastleQueenside(Position kingPos, Board board, Color color) {
+    private boolean canCastleQueenside(Position kingPos, Board board, Color color) {
         Position rookPos = createQueensideRookPosition(kingPos);
 
         return isRookPresent(board, rookPos, color) &&
@@ -68,24 +79,24 @@ public final class CastlingStrategy {
                 !wouldKingPassThroughDanger(board, kingPos, color, -1);
     }
 
-    private static Position createKingsideRookPosition(Position kingPos) {
+    private Position createKingsideRookPosition(Position kingPos) {
         return new Position(kingPos.row(), KINGSIDE_ROOK_COLUMN);
     }
 
-    private static Position createQueensideRookPosition(Position kingPos) {
+    private Position createQueensideRookPosition(Position kingPos) {
         return new Position(kingPos.row(), QUEENSIDE_ROOK_COLUMN);
     }
 
-    private static boolean isRookPresent(Board board, Position pos, Color color) {
+    private boolean isRookPresent(Board board, Position pos, Color color) {
         Optional<Piece> piece = board.getPieceAt(pos);
         return piece.isPresent() && isCorrectRook(piece.get(), color);
     }
 
-    private static boolean isCorrectRook(Piece piece, Color color) {
+    private boolean isCorrectRook(Piece piece, Color color) {
         return piece.type() == PieceType.ROOK && piece.color() == color;
     }
 
-    private static boolean areSquaresClearBetween(Board board, Position kingPos, Position rookPos) {
+    private boolean areSquaresClearBetween(Board board, Position kingPos, Position rookPos) {
         int start = Math.min(kingPos.column(), rookPos.column()) + 1;
         int end = Math.max(kingPos.column(), rookPos.column());
 
@@ -97,11 +108,26 @@ public final class CastlingStrategy {
         return true;
     }
 
-    private static boolean isSquareOccupied(Board board, int row, int col) {
+    private boolean isSquareOccupied(Board board, int row, int col) {
         return !board.isEmpty(new Position(row, col));
     }
 
-    private static boolean wouldKingPassThroughDanger(Board board, Position kingPos, Color color, int direction) {
-        return false;
+    private boolean wouldKingPassThroughDanger(Board board, Position kingPos, Color color, int direction) {
+        Position intermediate = new Position(kingPos.row(), kingPos.column() + direction);
+        Position target = new Position(kingPos.row(), kingPos.column() + (direction * 2));
+
+        return isPositionUnderAttack(board, intermediate, color) ||
+                isPositionUnderAttack(board, target, color);
+    }
+
+    private boolean isPositionUnderAttack(Board board, Position position, Color defendingColor) {
+        return board.getAllPieces().entrySet().stream()
+                .filter(entry -> entry.getValue().color() == defendingColor.opposite())
+                .anyMatch(entry -> canAttackPosition(board, entry.getKey(), position, entry.getValue()));
+    }
+
+    private boolean canAttackPosition(Board board, Position from, Position target, Piece piece) {
+        List<Position> validMoves = piece.movementStrategy().getValidMoves(from, board, piece.color());
+        return validMoves.contains(target);
     }
 }
