@@ -6,17 +6,16 @@ plugins {
 
 dependencies {
     implementation 'org.apache.commons:commons-text'
+    implementation("edu.austral.dissis.chess:chess-ui:3.0.1")
 }
 
 javafx {
-    // Define the JavaFX version to use.
     version = "21"
-    modules = ['javafx.graphics']
-
+    modules = ["javafx.graphics", "javafx.controls"]
 }
 
 application {
     // Define the main class for the application.
-    mainClass = 'edu.austral.dissis.chess.engine.App'
+    mainClass = 'edu.austral.dissis.chess.ui.MainKt'
 //    mainClass = 'edu.austral.dissis.chess.engine.AppKt'
 }
