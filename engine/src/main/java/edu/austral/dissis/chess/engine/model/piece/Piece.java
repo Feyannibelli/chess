@@ -4,8 +4,6 @@ import edu.austral.dissis.chess.engine.model.board.Board;
 import edu.austral.dissis.chess.engine.model.board.Position;
 import edu.austral.dissis.chess.engine.model.game.Move;
 import edu.austral.dissis.chess.engine.model.piece.movement.MovementStrategy;
-import javafx.beans.binding.ObjectExpression;
-import javafx.geometry.Pos;
 
 import java.util.Objects;
 import java.util.Set;
