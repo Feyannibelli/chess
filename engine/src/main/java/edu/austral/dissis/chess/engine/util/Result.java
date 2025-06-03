@@ -1,4 +1,3 @@
 package edu.austral.dissis.chess.engine.util;
 
-public class Result {
-}
+public interface Result {}
