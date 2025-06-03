@@ -23,7 +23,7 @@ public interface MovementStrategy {
                 this.canMoveTo(from, to, board, color) &&
                         other.canMoveTo(from, to, board, color);
     }
-    
+
     default MovementStrategy negate() {
         return (from, to, board, color) ->
                 !this.canMoveTo(from, to, board, color);
