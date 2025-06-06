@@ -3,7 +3,6 @@ package edu.austral.dissis.chess.engine.adapter;
 import edu.austral.dissis.chess.engine.model.engine.ChessEngine;
 import edu.austral.dissis.chess.engine.model.domain.board.Position;
 import edu.austral.dissis.chess.engine.model.domain.movement.Move;
-import edu.austral.dissis.chess.engine.model.domain.piece.Color;
 import edu.austral.dissis.chess.engine.model.result.Result;
 import edu.austral.dissis.chess.gui.*;
 
@@ -23,18 +22,33 @@ public class ChessGameEngineAdapter implements GameEngine {
             Position from = PositionAdapter.fromGui(move.getFrom());
             Position to = PositionAdapter.fromGui(move.getTo());
 
-            Move chessMove = new Move(from, to, chessEngine.getCurrentPlayer());
-            Result<ChessEngine> result = chessEngine.makeMove(chessMove);
+            Result<ChessEngine> result = chessEngine.makeMove(from, to);
 
-            if (result.isSuccess()) {
-                chessEngine = result.getValue();
-                return new MoveResult(NewGameState.ONGOING, Optional.empty());
-            } else {
-                return new MoveResult(NewGameState.ONGOING, Optional.of(result.getErrorMessage()));
-            }
+            return result
+                    .map(newEngine -> {
+                        chessEngine = newEngine;
+                        return createMoveResult();
+                    })
+                    .getOrElseGet(errorMsg ->
+                            new MoveResult(NewGameState.ONGOING, Optional.of(errorMsg)));
+
         } catch (Exception e) {
             return new MoveResult(NewGameState.ONGOING, Optional.of(e.getMessage()));
         }
+    }
+
+    private MoveResult createMoveResult() {
+        NewGameState gameState = mapGameState();
+        Optional<String> message = chessEngine.getGameResult();
+        return new MoveResult(gameState, message);
+    }
+
+    private NewGameState mapGameState() {
+        return switch (chessEngine.getGameState()) {
+            case ONGOING -> NewGameState.ONGOING;
+            case CHECK -> NewGameState.ONGOING; // Check is still ongoing
+            case CHECKMATE, STALEMATE, DRAW -> NewGameState.FINISHED;
+        };
     }
 
     @Override
@@ -43,13 +57,36 @@ public class ChessGameEngineAdapter implements GameEngine {
     }
 
     @Override
-    public List<edu.austral.dissis.chess.gui.Position> validMoves(edu.austral.dissis.chess.gui.Position position) {
-        // TODO: Implementar cuando tengamos las estrategias de movimiento
-        return List.of();
+    public List<edu.austral.dissis.chess.gui.Position> validMoves(
+            edu.austral.dissis.chess.gui.Position position) {
+        Position internalPosition = PositionAdapter.fromGui(position);
+
+        return chessEngine.getValidMoves(internalPosition)
+                .stream()
+                .map(PositionAdapter::toGui)
+                .toList();
     }
 
     @Override
     public void init() {
         this.chessEngine = ChessEngine.createStandardGame();
+    }
+
+    // Métodos adicionales para debugging
+    public String getGameInfo() {
+        return String.format(
+                "Turn: %d, Current player: %s, Game state: %s",
+                chessEngine.getTurnNumber(),
+                chessEngine.getCurrentPlayer().id(),
+                chessEngine.getGameState()
+        );
+    }
+
+    public boolean isGameOver() {
+        return chessEngine.isGameOver();
+    }
+
+    public List<Move> getMoveHistory() {
+        return chessEngine.getMoveHistory();
     }
 }

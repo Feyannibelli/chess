@@ -2,75 +2,136 @@ package edu.austral.dissis.chess.engine.model.engine;
 
 import edu.austral.dissis.chess.engine.model.domain.board.Board;
 import edu.austral.dissis.chess.engine.model.domain.board.Position;
+import edu.austral.dissis.chess.engine.model.domain.game.Game;
+import edu.austral.dissis.chess.engine.model.domain.game.GameSetup;
 import edu.austral.dissis.chess.engine.model.domain.game.GameState;
 import edu.austral.dissis.chess.engine.model.domain.game.Player;
 import edu.austral.dissis.chess.engine.model.domain.movement.Move;
 import edu.austral.dissis.chess.engine.model.domain.piece.Color;
-import edu.austral.dissis.chess.engine.model.domain.rules.GameRules;
+import edu.austral.dissis.chess.engine.model.domain.piece.Piece;
 import edu.austral.dissis.chess.engine.model.domain.rules.StandardChessRules;
 import edu.austral.dissis.chess.engine.model.result.Result;
 
-public class ChessEngine {
-    private final Board board;
-    private final Player currentPlayer;
-    private final GameState gameState;
-    private final GameRules gameRules;
+import java.util.List;
+import java.util.Optional;
 
-    public ChessEngine(Board board, Player currentPlayer, GameState gameState, GameRules gameRules) {
-        this.board = board;
-        this.currentPlayer = currentPlayer;
-        this.gameState = gameState;
-        this.gameRules = gameRules;
+public class ChessEngine {
+    private final Game game;
+
+    private ChessEngine(Game game) {
+        this.game = game;
     }
 
     public static ChessEngine createStandardGame() {
-        Board initialBoard = Board.createStandardBoard();
-        Player whitePlayer = new Player("White", Color.WHITE);
-        GameRules rules = new StandardChessRules();
-        return new ChessEngine(initialBoard, whitePlayer, GameState.ONGOING, rules);
+        Game standardGame = GameSetup.standardChess().createGame();
+        return new ChessEngine(standardGame);
+    }
+
+    public static ChessEngine createCustomGame(GameSetup setup) {
+        Game customGame = setup.createGame();
+        return new ChessEngine(customGame);
     }
 
     public Result<ChessEngine> makeMove(Move move) {
-        Result<Void> validation = gameRules.validateMove(move, board);
-        if (validation.isError()) {
-            return Result.error(validation.getErrorMessage());
-        }
-
-        Board newBoard = board.movePiece(move.from(), move.to());
-
-        Player nextPlayer = new Player(
-                currentPlayer.color() == Color.WHITE ? "Black" : "White",
-                currentPlayer.color().opposite()
-        );
-
-        GameState newGameState = gameRules.updateGameState(newBoard, nextPlayer.color());
-
-        return Result.success(new ChessEngine(newBoard, nextPlayer, newGameState, gameRules));
+        return game.makeMove(move)
+                .map(ChessEngine::new);
     }
 
+    public Result<ChessEngine> makeMove(Position from, Position to) {
+        Move move = new Move(from, to, getCurrentPlayer());
+        return makeMove(move);
+    }
+
+    public List<Position> getValidMoves(Position from) {
+        Optional<Piece> piece = game.board().getPieceAt(from);
+        if (piece.isEmpty() || piece.get().color() != getCurrentPlayer().color()) {
+            return List.of();
+        }
+
+        return game.board().getAllPositions().stream()
+                .filter(to -> piece.get().canMoveTo(from, to, game.board()))
+                .filter(to -> wouldNotLeaveKingInCheck(from, to))
+                .toList();
+    }
+
+    private boolean wouldNotLeaveKingInCheck(Position from, Position to) {
+        Board testBoard = game.board().movePiece(from, to);
+        return !edu.austral.dissis.chess.engine.model.domain.rules.CheckDetector
+                .isInCheck(testBoard, getCurrentPlayer().color());
+    }
+
+    public boolean canMakeMove(Position from, Position to) {
+        return getValidMoves(from).contains(to);
+    }
+
+    // Getters inmutables
     public Board getBoard() {
-        return board;
+        return game.board();
     }
 
     public Player getCurrentPlayer() {
-        return currentPlayer;
+        return game.currentPlayer();
     }
 
     public GameState getGameState() {
-        return gameState;
+        return game.gameState();
     }
 
     public boolean isGameOver() {
-        return gameState == GameState.CHECKMATE ||
-                gameState == GameState.STALEMATE ||
-                gameState == GameState.DRAW;
+        return game.isGameOver();
     }
 
-    public ChessEngine switchPlayer() {
-        Player nextPlayer = new Player(
-                currentPlayer.color() == Color.WHITE ? "Black" : "White",
-                currentPlayer.color().opposite()
-        );
-        return new ChessEngine(board, nextPlayer, gameState, gameRules);
+    public List<Move> getMoveHistory() {
+        return game.moveHistory();
+    }
+
+    public int getTurnNumber() {
+        return game.getTurnNumber();
+    }
+
+    public Optional<String> getGameResult() {
+        return switch (game.gameState()) {
+            case CHECKMATE -> Optional.of(getOpponentColor() + " wins by checkmate");
+            case STALEMATE -> Optional.of("Draw by stalemate");
+            case DRAW -> Optional.of("Draw");
+            default -> Optional.empty();
+        };
+    }
+
+    private String getOpponentColor() {
+        return getCurrentPlayer().color() == Color.WHITE ? "Black" : "White";
+    }
+
+    // Para debugging y testing
+    public String getBoardString() {
+        StringBuilder sb = new StringBuilder();
+        for (int row = 7; row >= 0; row--) {
+            sb.append(row + 1).append(" ");
+            for (int col = 0; col < 8; col++) {
+                Position pos = new Position(row, col);
+                Optional<Piece> piece = game.board().getPieceAt(pos);
+                if (piece.isPresent()) {
+                    sb.append(getPieceSymbol(piece.get()));
+                } else {
+                    sb.append(".");
+                }
+                sb.append(" ");
+            }
+            sb.append("\n");
+        }
+        sb.append("  a b c d e f g h\n");
+        return sb.toString();
+    }
+
+    private String getPieceSymbol(Piece piece) {
+        String symbol = switch (piece.type()) {
+            case KING -> "K";
+            case QUEEN -> "Q";
+            case ROOK -> "R";
+            case BISHOP -> "B";
+            case KNIGHT -> "N";
+            case PAWN -> "P";
+        };
+        return piece.color() == Color.WHITE ? symbol : symbol.toLowerCase();
     }
 }
