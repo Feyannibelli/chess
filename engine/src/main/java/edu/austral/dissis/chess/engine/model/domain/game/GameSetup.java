@@ -11,6 +11,7 @@ import edu.austral.dissis.chess.engine.model.domain.rules.StandardChessRules;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 public class GameSetup {
     private final Map<Position, Piece> pieces;
@@ -40,8 +41,18 @@ public class GameSetup {
 
     public Game createGame() {
         Board board = new Board(pieces, boardRows, boardColumns);
-        return Game.createStandardGame(gameRules)
-                .board(board);
+        Player whitePlayer = new Player("White", Color.WHITE);
+        Player blackPlayer = new Player("Black", Color.BLACK);
+
+        return new Game(
+                board,
+                whitePlayer,
+                whitePlayer,
+                blackPlayer,
+                GameState.ONGOING,
+                gameRules,
+                new ArrayList<>()
+        );
     }
 
     private static Map<Position, Piece> createStandardPieces() {
