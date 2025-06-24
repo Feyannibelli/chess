@@ -3,7 +3,7 @@ package edu.austral.dissis.chess.engine.main.adapter;
 import edu.austral.dissis.chess.engine.main.common.game.GameState;
 import edu.austral.dissis.chess.engine.main.common.movement.Movement;
 
-public class GameController {
+public final class GameController {
   private GameState gameState;
 
   public GameController(GameState initialState) {

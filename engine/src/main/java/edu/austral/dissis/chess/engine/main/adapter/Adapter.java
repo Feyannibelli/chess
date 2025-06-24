@@ -85,7 +85,7 @@ public final class Adapter {
   }
 
   private PlayerColor nextTurn(GameState gameState) {
-    return gameState.getCurrentTurn() == Color.WHITE ? PlayerColor.BLACK : PlayerColor.WHITE;
+    return parseColor(gameState.getCurrentTurn());
   }
 
   public BoardSize getBoardSize(GameState gameState) {

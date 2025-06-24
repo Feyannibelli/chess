@@ -4,7 +4,6 @@ import static edu.austral.dissis.chess.engine.main.gameconfig.GameConstants.COLU
 import static edu.austral.dissis.chess.engine.main.gameconfig.GameConstants.ROWS;
 
 import edu.austral.dissis.chess.engine.main.checkers.factory.pieceinit.ManInitializer;
-import edu.austral.dissis.chess.engine.main.checkers.factory.pieceinit.QueenInitializer;
 import edu.austral.dissis.chess.engine.main.common.Color;
 import edu.austral.dissis.chess.engine.main.common.board.Board;
 import edu.austral.dissis.chess.engine.main.common.board.BoardImpl;
@@ -36,15 +35,6 @@ public class CheckersBoard {
 
     map.put(new Position(7, 0), new ManInitializer().initialize(Color.BLACK));
     map.put(new Position(5, 0), new ManInitializer().initialize(Color.BLACK));
-
-    return new BoardImpl(getWidth(8), getHeight(8), map);
-  }
-
-  public static Board createCheckersQueenTestBoard() {
-    Map<Position, Piece> map = new HashMap<>();
-
-    map.put(new Position(2, 2), new QueenInitializer().initialize(Color.WHITE));
-    map.put(new Position(1, 1), new ManInitializer().initialize(Color.BLACK));
 
     return new BoardImpl(getWidth(8), getHeight(8), map);
   }

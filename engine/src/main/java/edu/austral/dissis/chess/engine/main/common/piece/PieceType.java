@@ -7,7 +7,6 @@ public enum PieceType {
   BISHOP,
   QUEEN,
   KING,
-
   ARCHBISHOP,
   CHANCELLOR,
 }

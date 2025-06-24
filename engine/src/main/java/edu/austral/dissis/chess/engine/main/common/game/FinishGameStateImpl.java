@@ -85,12 +85,12 @@ public class FinishGameStateImpl implements GameState {
 
   @Override
   public GameState undo() {
-    return null;
+    throw new UnsupportedOperationException("Undo not available in finished game state");
   }
 
   @Override
   public GameState redo() {
-    return null;
+    throw new UnsupportedOperationException("Redo not available in finished game state");
   }
 
   @Override

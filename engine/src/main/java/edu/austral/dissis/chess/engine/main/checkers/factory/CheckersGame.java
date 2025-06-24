@@ -16,10 +16,14 @@ public class CheckersGame {
 
   public static GameState createCheckersNormalGame() {
     Board board = CheckersBoard.createCheckersBoard();
+
+    // Inicializar el turno con BLACK y sin movimientos forzados al inicio
+    CheckersTurnManager initialTurnManager = new CheckersTurnManager(Color.BLACK, List.of());
+
     return new GameStateImpl(
         List.of(board),
         new ExtinctionCondition(),
-        new CheckersTurnManager(Color.WHITE, List.of()),
+        initialTurnManager,
         List.of(),
         List.of(new HasEatenValidator(), new PromotionValidator(new QueenInitializer())),
         GameStateType.NORMAL);

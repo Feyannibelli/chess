@@ -1,7 +1,7 @@
 package edu.austral.dissis.chess.ui
 
-import edu.austral.dissis.chess.engine.main.adapter.CheckersGameEngine
-import edu.austral.dissis.chess.engine.main.adapter.ChessGameEngine
+import edu.austral.dissis.chess.engine.main.adapter.UnifiedGameEngine
+import edu.austral.dissis.chess.engine.main.gameconfig.GameConstants
 import edu.austral.dissis.chess.gui.CachedImageResolver
 import edu.austral.dissis.chess.gui.DefaultImageResolver
 import edu.austral.dissis.chess.gui.createGameViewFrom
@@ -24,13 +24,13 @@ class GameSelectionApplication : Application() {
         private const val VBOX_SPACING = 20.0
         private const val VBOX_PADDING = 50.0
         private const val SCENE_WIDTH = 300.0
-        private const val SCENE_HEIGHT = 200.0
+        private const val SCENE_HEIGHT = 270.0 // Increased for third button
 
-        fun getGameTitle(gameType: String): String {
-            return when (gameType.lowercase()) {
-                "chess" -> "Chess"
-                "checkers" -> "Checkers"
-                else -> "Board Game"
+        fun getGameTitle(gameType: GameConstants.GameType): String {
+            return when (gameType) {
+                GameConstants.GameType.CHESS -> "Chess"
+                GameConstants.GameType.CHECKERS -> "Checkers"
+                GameConstants.GameType.CAPABLANCA -> "Capablanca Chess"
             }
         }
     }
@@ -41,14 +41,21 @@ class GameSelectionApplication : Application() {
         // Create buttons for each game
         val chessButton =
             javafx.scene.control.Button("Chess").apply {
-                setOnAction { startGame("chess", primaryStage) }
+                setOnAction { startGame(GameConstants.GameType.CHESS, primaryStage) }
                 prefWidth = BUTTON_WIDTH
                 prefHeight = BUTTON_HEIGHT
             }
 
         val checkersButton =
             javafx.scene.control.Button("Checkers").apply {
-                setOnAction { startGame("checkers", primaryStage) }
+                setOnAction { startGame(GameConstants.GameType.CHECKERS, primaryStage) }
+                prefWidth = BUTTON_WIDTH
+                prefHeight = BUTTON_HEIGHT
+            }
+
+        val capablancaButton =
+            javafx.scene.control.Button("Capablanca Chess").apply {
+                setOnAction { startGame(GameConstants.GameType.CAPABLANCA, primaryStage) }
                 prefWidth = BUTTON_WIDTH
                 prefHeight = BUTTON_HEIGHT
             }
@@ -56,7 +63,7 @@ class GameSelectionApplication : Application() {
         // Layout
         val vbox =
             javafx.scene.layout.VBox(VBOX_SPACING).apply {
-                children.addAll(chessButton, checkersButton)
+                children.addAll(chessButton, checkersButton, capablancaButton)
                 alignment = javafx.geometry.Pos.CENTER
                 padding = javafx.geometry.Insets(VBOX_PADDING)
             }
@@ -66,15 +73,10 @@ class GameSelectionApplication : Application() {
     }
 
     private fun startGame(
-        gameType: String,
+        gameType: GameConstants.GameType,
         primaryStage: Stage,
     ) {
-        val gameEngine =
-            when (gameType) {
-                "chess" -> ChessGameEngine()
-                "checkers" -> CheckersGameEngine()
-                else -> ChessGameEngine() // Default fallback
-            }
+        val gameEngine = UnifiedGameEngine(gameType)
 
         primaryStage.title = getGameTitle(gameType)
         val root = createGameViewFrom(gameEngine, imageResolver)
